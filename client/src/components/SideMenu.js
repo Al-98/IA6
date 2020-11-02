@@ -48,9 +48,9 @@ renderModeMenuItems = () => {
              onClick={this.props.toggleMenuOpen}>
           {/* SIDE MENU TITLE */}
           <div className="sidemenu-title">
-              <img src='http://tiny.cc/chrisprofilepic' height='50' width='50' />
-              <span id="userID" className="sidemenu-userID">&nbsp;{this.props.userId}</span>
-          </div>
+            <img src={this.props.profilePicURL} height='60' width='60' />
+            <span id="userID" className="sidemenu-userID">&nbsp;{this.props.displayName}</span>
+        </div>
           {/* MENU CONTENT */}
           {this.renderModeMenuItems()}
           {/* The following menu items are present regardless of mode */}

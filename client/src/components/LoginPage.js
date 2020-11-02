@@ -10,11 +10,14 @@ constructor() {
     //Create a ref for the email input DOM element
     this.emailInputRef = React.createRef();
     this.passwordInputRef = React.createRef();
-    this.state = {newAccountCreated: false,
+    this.state = {accountCreateMsg: "",
                   loginBtnIcon: "fa fa-sign-in",
                   loginBtnLabel: "Log In",
                   showCreateAccountDialog: false,
                   showResetPasswordDialog: false,
+                  githubIcon: "fa fa-github",
+                  githubLabel: "Sign in with GitHub",
+                  loginMsg: ""
                   };
 } 
     
@@ -24,52 +27,40 @@ componentDidMount() {
 }  
 
 //handleLogin -- Callback function that sets up initial app state upon login.
-handleLogin = () => {
+//handleLogin = () => {
     //Stop spinner
-    this.setState({loginBtnIcon: "fa fa-sign-in",
-                loginBtnLabel: "Log In"});
+//    this.setState({loginBtnIcon: "fa fa-sign-in",
+ //                  loginBtnLabel: "Log In"});
     //Set current user
-    this.props.setUserId(this.emailInputRef.current.value);
+    //this.props.setUserId(this.emailInputRef.current.value);
     //Trigger switch to FEED mode (default app landing page)
-    this.props.changeMode(AppMode.FEED);
+    //this.props.changeMode(AppMode.FEED);
+//}
+
+
+//handleLoginSubmit -- Called when user clicks on login button.
+handleLoginSubmit = async (event) => {
+    event.preventDefault();
+    this.setState({loginBtnIcon: "fa fa-spin fa-spinner",
+                   loginBtnLabel: "Logging In..."});
+    const url = "auth/login?username=" + this.emailInputRef.current.value +
+                "&password=" + this.passwordInputRef.current.value;
+    const res = await fetch(url, {method: 'POST'}); 
+    if (res.status == 200) { //successful login!
+        window.open("/","_self");
+    } else { //Unsuccessful login
+      const resText = await res.text();
+      this.setState({loginBtnIcon: "fa fa-sign-in",
+                     loginBtnLabel: "Log In",
+                     loginMsg: resText});
+    }
 }
 
-
-//handleLoginSubmit -- Called when user clicks on login button. Initiate spinner
-//for 1 second and call handleLogin to do the work.
-handleLoginSubmit = (event) => {
-        event.preventDefault();
-        this.setState({loginBtnIcon: "fa fa-spin fa-spinner",
-                        loginBtnLabel: "Logging In..."});
-        //Initiate spinner for 1 second
-        setTimeout(this.handleLogin,1000);
-}
-
-//handleLoginChange -- Check the validity of the username (email address)
-//password entered into the login page, setting the customValidity message 
-//appropriately. 
-handleLoginChange = () => {
-    let thisUser = this.emailInputRef.current.value;
-    let data = JSON.parse(localStorage.getItem(thisUser));
-    //Check username and password:
-    if (data == null) { 
-        this.emailInputRef.current.setCustomValidity("No account with this email address exists. Choose 'Create an account'.");
-        return; //Exit the function; no need to check pw validity
-    } else {
-        this.emailInputRef.current.setCustomValidity("");
-    }
-    if (data.password != this.passwordInputRef.current.value) {
-        this.passwordInputRef.current.setCustomValidity("The password you entered is incorrect. Please try again or choose 'Reset your password'.");
-    } else {
-        this.passwordInputRef.current.setCustomValidity("");
-    }
-  }
-
-  //newAccountCreated -- Called by child CreateAccountDialog component when new user account
-  //successfully created. Hide the dialog and display a message inviting user to log in
-  //with new credentials.
-  newAccountCreated = () => {
-      this.setState({newAccountCreated: true,
+  //accountCreateStatus -- Called by child CreateAccountDialog component when 
+  //user attempted to create new account. Hide the dialog and display 
+  //a message indicating result of the attempt.
+  accountCreateStatus = (msg) => {
+      this.setState({accountCreateMsg: msg,
                      showCreateAccountDialog: false});
   }
 
@@ -79,13 +70,30 @@ handleLoginChange = () => {
       this.setState({showCreateAccountDialog: false});
   }
 
+//handleOAuthLogin -- Callback function that initiates contact with OAuth
+//provider
+handleOAuthLogin = (provider) => {
+    window.open(`/auth/${provider}`,"_self");
+}
+
+//handleOAuthLoginClick -- Called whent the user clicks on button to
+//authenticate via a third-party OAuth service. The name of the provider is
+//passed in as a parameter.
+handleOAuthLoginClick = (provider) => {
+   this.setState({[provider + "Icon"] : "fa fa-spin fa-spinner",
+                  [provider + "Label"] : "Connecting..."});
+   setTimeout(() => this.handleOAuthLogin(provider),1000);
+}
+
+
   render() {
     return(
         <div id="login-mode-div" className="padded-page">
         <center>
             <h1 />
-            {this.state.newAccountCreated ? <p className="emphasis">New account created! Enter credentials to log in.</p> : null}
-            <form id="loginInterface" onSubmit={this.handleLoginSubmit} onChange={this.handleLoginChange}>
+            {this.state.accountCreateMsg != "" ? <p className="emphasis">{this.state.accountCreateMsg}</p> : null}
+            {this.state.loginMsg != "" ? <p className="emphasis">{this.state.loginMsg}</p> : null}
+            <form id="loginInterface" onSubmit={this.handleLoginSubmit}>
             <label htmlFor="emailInput" style={{ padding: 0, fontSize: 24 }}>
                 Email:
                 <input
@@ -125,13 +133,18 @@ handleLoginChange = () => {
                         onClick={() => {this.setState({showResetPasswordDialog: true});}}>
                 Reset your password</button>
             </p>  
+            <button type="button" className="btn btn-github"
+               onClick={() => this.handleOAuthLoginClick("github")}>
+              <span className={this.state.githubIcon}></span>&nbsp;
+                {this.state.githubLabel}
+            </button>
             <p>
                 <i>Version CptS 489</i>
             </p>
             </form>
             {this.state.showCreateAccountDialog ? 
               <CreateAccountDialog 
-                newAccountCreated={this.newAccountCreated}
+                accountCreateStatus={this.accountCreateStatus}
                 cancelCreateAccount={this.cancelCreateAccount} /> : null}
             {this.state.showResetPasswordDialog ? <ResetPasswordDialog /> : null}
         </center>

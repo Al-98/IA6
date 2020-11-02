@@ -32,8 +32,46 @@ class App extends React.Component {
     super();
     this.state = {mode: AppMode.LOGIN,
                   menuOpen: false,
-                  userId: ""};
+                  authenticated: false,
+                  userObj: {displayName: "", profilePicURL: ""},
+                 };
   }
+
+  //componentDidMount
+  componentDidMount() {
+    if (!this.state.authenticated) { 
+      //Use /auth/test route to (re)-test authentication and obtain user data
+      fetch("/auth/test")
+        .then((response) => response.json())
+        .then((obj) => {
+          if (obj.isAuthenticated) {
+            this.setState({
+              userObj: obj.user,
+              authenticated: true,
+              mode: AppMode.FEED //We're authenticated so can get into the app.
+            });
+          }
+        }
+      )
+    } 
+  }
+
+  //refreshOnUpdate(newMode) -- Called by child components when user data changes in 
+  //the database. The function calls the users/:userid (GET) route to update 
+  //the userObj state var based on the latest database changes, and sets the 
+  //mode state var is set to newMode. After this method is called, the
+  //App will re-render itself, forcing the new data to 
+  //propagate to the child components when they are re-rendered.
+  refreshOnUpdate = async(newMode) => {
+    let response = await fetch("/users/" + this.state.userObj.id);
+    response = await response.json();
+    const obj = JSON.parse(response);
+    this.setState({
+      userObj: obj,
+      mode: newMode
+    });
+  }
+
 
   handleChangeMode = (newMode) => {
     this.setState({mode: newMode});
@@ -52,8 +90,10 @@ class App extends React.Component {
   }
 
   setUserId = (Id) => {
-    this.setState({userId: Id});
+    this.setState({userId: Id,
+                   authenticated: true});
   }
+
 
   render() {
     const ModePage = modeToPage[this.state.mode];
@@ -69,7 +109,8 @@ class App extends React.Component {
             menuOpen = {this.state.menuOpen}
             mode={this.state.mode}
             toggleMenuOpen={this.toggleMenuOpen}
-            userId={this.state.userId}
+            displayName={this.state.userObj.displayName}
+            profilePicURL={this.state.userObj.profilePicURL}
             logOut={() => this.handleChangeMode(AppMode.LOGIN)}/>
           <ModeBar 
             mode={this.state.mode} 
@@ -79,8 +120,8 @@ class App extends React.Component {
             menuOpen={this.state.menuOpen}
             mode={this.state.mode}
             changeMode={this.handleChangeMode}
-            userId={this.state.userId}
-            setUserId={this.setUserId}/>
+            userObj={this.state.userObj}
+            refreshOnUpdate={this.refreshOnUpdate}/>
       </div>
     );  
   }
